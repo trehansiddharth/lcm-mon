@@ -3,6 +3,7 @@ import urwid
 import threading
 import optparse
 import time
+import json
 from lcm_mon.core import *
 from lcm_mon.widgets import *
 from lcm_mon.network import *
@@ -103,8 +104,10 @@ if __name__ == "__main__":
 
     parser = optparse.OptionParser()
 
-    # parser.add_option("-u", "--url", dest="url", help="Capture packets from LCM_URL", metavar="LCM_URL", default="udpm://239.255.76.67:7667?ttl=1")
-    parser.add_option("-t", "--types", dest="types", help="Load LCM types from TYPESDIRS", metavar="TYPESDIRS", action="append", default=[])
+    parser.add_option("-u", "--url", dest="url", help="Capture packets from LCM_URL", metavar="LCM_URL", default=None)
+    parser.add_option("-f", "--filter", dest="filter", help="Filter subscribed LCM channels by FILTER_REGEX", metavar="FILTER_REGEX", default=".*")
+    parser.add_option("-t", "--types", dest="types", help="Load LCM types from TYPES_DIRS", metavar="TYPES_DIRS", action="append", default=[])
+    parser.add_option("-c", "--config", dest="config", help="Load configuration from CONFIG_FILE", metavar="CONFIG_FILE", default="~/.config/lcm-mon/config.json")
 
     (options, args) = parser.parse_args()
 
@@ -113,9 +116,19 @@ if __name__ == "__main__":
 
     start_time = time.time()
 
+    try:
+        with open(os.path.expanduser(options.config), "r") as f:
+            config = json.load(f)
+    except FileNotFoundError:
+        config = { "highlight_color" : "yellow",
+            "default_refresh_rate" : 1.5 }
+
+    highlight_color = config["highlight_color"]
+    state._refresh_rate = config["default_refresh_rate"]
+
     palette = [("item.normal", "", ""),
-        ("item.focus", "black", "yellow"),
-        ("item.header", "bold,yellow", "")]
+        ("item.focus", "black", highlight_color),
+        ("item.header", "bold," + highlight_color, "")]
     data_table = DataTable(lcm_classes)
     data = urwid.LineBox(data_table.widget())
     table = ChannelsTable(callback=update_data_table)
@@ -125,11 +138,9 @@ if __name__ == "__main__":
     visualizer = Visualizer(formatter=label_formatter)
     display = urwid.Columns(urwid.SimpleFocusListWalker([channels, data]))
     status = LCMStatusBar()
+    status.set(refresh=state._refresh_rate)
     top = urwid.Frame(display, footer=status)
     loop = urwid.MainLoop(top, unhandled_input=handle_input, palette=palette)
-    node = init_node()
-    lcm_thread = threading.Thread(target=handle_lcm, args=(node, update_table))
-    lcm_thread.setDaemon(True)
-    lcm_thread.start()
+    node = handle_lcm(url=options.url, channels=options.filter, callback=update_table)
     loop.set_alarm_in(1 / state._refresh_rate, refresh_screen)
     loop.run()

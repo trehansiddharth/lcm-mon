@@ -140,10 +140,19 @@ def load_lcm_modules(folders):
     shutil.rmtree(lcm_dir)
     return lcm_classes
 
-def handle_lcm(node, callback=id):
-    subscription = node.subscribe(".*", callback)
-    while True:
-        node.handle()
+def handle_lcm(url=None, channels=".*", callback=id):
+    if url is None:
+        node = lcm.LCM()
+    else:
+        node = lcm.LCM(url)
+    subscription = node.subscribe(channels, callback)
+    def handler(node):
+        while True:
+            node.handle()
+    handler_thread = threading.Thread(target=handler, args=(node,))
+    handler_thread.setDaemon(True)
+    handler_thread.start()
+    return node
 
 def play_log(node, log, callback=id):
     while True:

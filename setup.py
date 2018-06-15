@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 from distutils.core import setup
+import os
 
 setup(name='lcm-mon',
-    version='1.1',
+    version='1.2',
     description='Monitor program for LCM',
     author='Siddharth Trehan',
     author_email='trehans@mit.edu',
@@ -15,5 +16,6 @@ setup(name='lcm-mon',
         "matplotlib",
         "numpy"
     ],
-    scripts=["bin/lcm-mon"]
+    scripts=["bin/lcm-mon"],
+    data_files=[("/etc/lcm-mon/", ["config/config.json"])]
 )

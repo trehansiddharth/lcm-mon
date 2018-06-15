@@ -123,9 +123,9 @@ class Table(Database):
 
 class LCMStatusBar(StatusBar):
     def __init__(self):
-        self._read_format = u"\u25b2 {} {:.3f}s / {:.3f}s @ {}x"
-        self._write_format = u"   \u25bc {} {:.3f} kB"
-        self._dumped_format = u"   \u25bc Wrote {} ({:.3f} kB)"
+        self._read_format = u"\u25b2 {} [{}] {:.3f}s / {:.3f}s @ {}x"
+        self._write_format = u"   \u25bc {} [{}] {:.3f} kB"
+        self._dumped_format = u"   \u25bc [{}] written ({:.3f} kB)"
         self._refresh_format = u"   \u27f3 {} Hz"
         self._spinner = Spinner()
         self.spin()
@@ -160,18 +160,20 @@ class LCMStatusBar(StatusBar):
                 spin = self._spin
             else:
                 spin = u"\u00b7"
+            path = log.path()
             position = log.position()
             total = log.length()
             speed = log.get_playback_speed()
-            return self._read_format.format(spin, position, total, speed)
+            return self._read_format.format(spin, path, position, total, speed)
 
     def print_write(self, log):
         if log is None:
             return ""
         elif log.is_open():
             spin = self._spin
+            path = log.path()
             written = log.tell() / 1e3
-            return self._write_format.format(spin, written)
+            return self._write_format.format(spin, path, written)
         else:
             path = log.path()
             written = log.size() / 1e3
