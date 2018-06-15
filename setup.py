@@ -5,7 +5,7 @@ from distutils.core import setup
 setup(name='lcm-mon',
     version='1.0',
     description='Monitor program for LCM',
-    author='Siddharth Trehah',
+    author='Siddharth Trehan',
     author_email='trehans@mit.edu',
     url='http://www.github.com/trehansiddharth/lcm-mon',
     packages=['lcm_mon'],
