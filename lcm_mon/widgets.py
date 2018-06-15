@@ -141,7 +141,7 @@ class LCMStatusBar(StatusBar):
         return ["command", "read", "write", "refresh"]
 
     def default(self):
-        return { "command" : "", "read" : None, "write" : None, "refresh" : 1.0 }
+        return { "command" : "", "read" : None, "write" : None, "refresh" : 1.5 }
 
     def reset(self):
         StatusBar.reset(self)
