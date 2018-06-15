@@ -1,0 +1,122 @@
+#!/usr/bin/python3
+import urwid
+import threading
+import optparse
+import time
+from lcm_mon.core import *
+from lcm_mon.widgets import *
+from lcm_mon.network import *
+from lcm_mon.util import *
+from lcm_mon.controller import *
+from lcm_mon.visualizer import *
+
+command = ""
+
+def handle_input(key):
+    global command
+    if command == "" or not command[0] == ":":
+        command = ""
+        if key == ":":
+            command += key.lower()
+    else:
+        if key == "enter":
+            try:
+                run_command(command, state, status, node,
+                    table, data_table, visualizer)
+                command = ""
+            except ValueError:
+                command = "Unrecognized command or invalid syntax"
+            except urwid.ExitMainLoop:
+                raise urwid.ExitMainLoop
+            # except:
+            #     command = "Exception: {}".format(sys.exc_info()[0])
+        elif key == "backspace":
+            command = command[:-1]
+        elif key == "esc":
+            command = ""
+        elif len(key) == 1:
+            command += key.lower()
+    status.set(command=command)
+
+def update_table(channel, data):
+    i = table.search(lambda entry: entry[0] == channel)
+    if i is None:
+        table.append((channel, 0, time.time() - start_time, data, 1))
+    else:
+        framerate = table[i][1]
+        count = table[i][4]
+        table[i] = (channel, framerate, time.time() - start_time, data, count + 1)
+    state.lock()
+    if state._write_log is not None and state._write_log.is_open():
+        timestamp = int(time.time() * 1e6)
+        state._write_log.write_event(timestamp, channel, data)
+    state.unlock()
+
+def refresh_screen(_loop, _data):
+    status.spin()
+    status.set(read=state._read_log, write=state._write_log)
+    table.lock()
+    for i in range(table.length()):
+        count = table[i][4]
+        framerate = count * state._refresh_rate
+        channel = table[i][0]
+        t = table[i][2]
+        data = table[i][3]
+        table[i] = (channel, framerate, t, data, 0)
+    i = table.current_focus()
+    if i is not None:
+        channel = table[i][0]
+        data = table[i][3]
+        table.unlock()
+        try:
+            data_table.update(data)
+        except ValueError:
+            data_table.set(channel, data)
+    for channel, variable in visualizer.tags():
+        lcm_class = data_table.classes[channel]
+        table.lock()
+        i = table.find_channel(channel)
+        data = table[i][3]
+        t = table[i][2]
+        table.unlock()
+        value = dict(decode(data,lcm_class))[variable]
+        visualizer.update((channel, variable), t, value)
+    _loop.draw_screen()
+    _loop.set_alarm_in(1 / state._refresh_rate, refresh_screen)
+
+if __name__ == "__main__":
+    sys.stdout.write("\x1b]2;lcm-mon\x07")
+
+    parser = optparse.OptionParser()
+
+    # parser.add_option("-u", "--url", dest="url", help="Capture packets from LCM_URL", metavar="LCM_URL", default="udpm://239.255.76.67:7667?ttl=1")
+    parser.add_option("-t", "--types", dest="types", help="Load LCM types from TYPESDIRS", metavar="TYPESDIRS", action="append", default=[])
+
+    (options, args) = parser.parse_args()
+
+    lcm_classes = load_lcm_modules(options.types)
+    state = MonState()
+
+    start_time = time.time()
+
+    palette = [("item.normal", "", ""),
+        ("item.focus", "black", "yellow"),
+        ("item.header", "bold,yellow", "")]
+    data_table = DataTable(lcm_classes)
+    data = urwid.LineBox(data_table.widget())
+    table = ChannelsTable(callback=lambda entry:
+        data_table.set(entry[0], entry[3]))
+    channels = urwid.LineBox(table.widget())
+    def label_formatter(tag, i):
+        return "{}.{} [{}]".format(tag[0], tag[1], i)
+    visualizer = Visualizer(formatter=label_formatter)
+    display = urwid.Columns(urwid.SimpleFocusListWalker([channels, data]))
+    status = LCMStatusBar()
+    top = urwid.Frame(display, footer=status)
+    loop = urwid.MainLoop(top, unhandled_input=handle_input, palette=palette)
+    node = init_node()
+    lcm_thread = threading.Thread(target=handle_lcm, args=(node, update_table))
+    lcm_thread.setDaemon(True)
+    lcm_thread.start()
+    loop.set_alarm_in(1 / state._refresh_rate, refresh_screen)
+    loop.run()
