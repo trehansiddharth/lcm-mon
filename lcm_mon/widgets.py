@@ -93,12 +93,12 @@ class CustomListBox(urwid.ListBox):
         return result
 
 class Table(Database):
-    def __init__(self, header, layout, callback=id, divided=False):
+    def __init__(self, header, layout, callback=id, divided=False, buffered=False):
         self._n = len(header)
         self._layout = layout
         self._walker = urwid.SimpleFocusListWalker([])
         self._table = CustomListBox(self._walker, callback=self._focus_callback)
-        Database.__init__(self, header, body=self._walker)
+        Database.__init__(self, header, body=self._walker, buffered=buffered)
         self._callback = callback
         self._divided = divided
 
@@ -185,7 +185,7 @@ class ChannelsTable(Table):
         self.header = ["== CHANNEL ==", "== HZ =="]
         self.layout = [("weight", 1), (8,)]
         Table.__init__(self, self.header, self.layout,
-            callback=callback, divided=False)
+            callback=callback, divided=False, buffered=True)
         self._hz_format = "{: 7.2f}"
 
     def format_entry(self, entry):
@@ -209,7 +209,7 @@ class DataTable(Table):
         self.current_class = None
         self.classes = {}
         Table.__init__(self, self.header, self.layout,
-            callback=callback, divided=True)
+            callback=callback, divided=True, buffered=True)
 
     def format_entry(self, entry):
         val = entry[1]

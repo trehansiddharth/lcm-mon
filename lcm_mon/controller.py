@@ -138,8 +138,12 @@ def run_command(command, state, status, node, table, data_table, visualizer):
         state.lock()
         table.lock()
         table.clear()
+        table.flush()
         table.unlock()
+        data_table.lock()
         data_table.clear()
+        data_table.flush()
+        data_table.unlock()
         if state._write_log is None or not state._write_log.is_open():
             state._write_log = None
             status.set(write=state._write_log)

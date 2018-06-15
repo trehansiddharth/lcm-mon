@@ -1,11 +1,22 @@
 import warnings
-
 warnings.filterwarnings("ignore")
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
 plt.ion()
+
+def pltpause(interval):
+    backend = plt.rcParams['backend']
+    if backend in matplotlib.rcsetup.interactive_bk:
+        figManager = matplotlib._pylab_helpers.Gcf.get_active()
+        if figManager is not None:
+            canvas = figManager.canvas
+            if canvas.figure.stale:
+                canvas.draw()
+            canvas.start_event_loop(interval)
+            return
 
 class Visualizer:
     def __init__(self, formatter=str):
@@ -43,17 +54,20 @@ class Visualizer:
                 for i, line in enumerate(lines):
                     line.set_label(self._formatter(tag, i))
                 self.lines[tag] = lines
-        plt.pause(0.001)
+                plt.legend()
+                plt.show(block=False)
         if self._ax is None:
             self._ax = plt.gca()
+            self._fig = plt.gcf()
+            plt.xlabel("Time (s)")
+            self._fig.canvas.set_window_title("lcm-mon :view")
         self._ax.relim()
         self._ax.autoscale_view()
-        plt.legend()
+        pltpause(0.01)
 
     def stop(self):
         self.series = {}
         self.lines = {}
-        self._ax = None
 
     def tags(self):
         return self.series.keys()

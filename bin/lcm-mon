@@ -39,6 +39,7 @@ def handle_input(key):
     status.set(command=command)
 
 def update_table(channel, data):
+    table.lock()
     i = table.search(lambda entry: entry[0] == channel)
     if i is None:
         table.append((channel, 0, time.time() - start_time, data, 1))
@@ -46,16 +47,24 @@ def update_table(channel, data):
         framerate = table[i][1]
         count = table[i][4]
         table[i] = (channel, framerate, time.time() - start_time, data, count + 1)
+    table.unlock()
     state.lock()
     if state._write_log is not None and state._write_log.is_open():
         timestamp = int(time.time() * 1e6)
         state._write_log.write_event(timestamp, channel, data)
     state.unlock()
 
+def update_data_table(entry):
+    data_table.lock()
+    data_table.set(entry[0], entry[3])
+    data_table.flush()
+    data_table.unlock()
+
 def refresh_screen(_loop, _data):
     status.spin()
     status.set(read=state._read_log, write=state._write_log)
     table.lock()
+    table.flush()
     for i in range(table.length()):
         count = table[i][4]
         framerate = count * state._refresh_rate
@@ -68,10 +77,15 @@ def refresh_screen(_loop, _data):
         channel = table[i][0]
         data = table[i][3]
         table.unlock()
+        data_table.lock()
+        data_table.flush()
         try:
             data_table.update(data)
         except ValueError:
             data_table.set(channel, data)
+        data_table.unlock()
+    else:
+        table.unlock()
     for channel, variable in visualizer.tags():
         lcm_class = data_table.classes[channel]
         table.lock()
@@ -104,8 +118,7 @@ if __name__ == "__main__":
         ("item.header", "bold,yellow", "")]
     data_table = DataTable(lcm_classes)
     data = urwid.LineBox(data_table.widget())
-    table = ChannelsTable(callback=lambda entry:
-        data_table.set(entry[0], entry[3]))
+    table = ChannelsTable(callback=update_data_table)
     channels = urwid.LineBox(table.widget())
     def label_formatter(tag, i):
         return "{}.{} [{}]".format(tag[0], tag[1], i)
