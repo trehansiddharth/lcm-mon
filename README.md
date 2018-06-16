@@ -1,10 +1,12 @@
 # lcm-mon
 
-`lcm-mon` is a command-line monitor program for the Lightweight Communications and Marshalling library, LCM. `lcm-mon` is intended for monitoring, debugging, and visualization purposes in robotics applications, and supports features such as previewing messages, reading and writing logs, and graphing message data. It has a `vim`-style minimalist interface that is powerful when needed.
+`lcm-mon` is an interprocess communications monitor for logging, visualization, and administration purposes in scientific and robotics applications. It runs on top of the Lightweight Communications and Marshalling library, LCM, and provides a UNIX-style minimal-but-powerful interface for previewing messages, reading and writing logs, and graphing message data.
 
 ## Preview
 
 ![(Screenshot of lcm-mon in action)](images/preview.png)
+
+The left pane shows all the incoming messages over the network. Individual messages can be selected and previewed on the right pane. The status bar at the bottom provides an overview of command input, progress of currently running commands, and other status items. `lcm-mon` accepts both keyboard and mouse input for navigation.
 
 ## Installation
 
@@ -20,6 +22,8 @@ sudo python3 setup.py install
 * `lcm` -- communication (build LCM with Python 3 bindings enabled)
 * `matplotlib` -- for visualization
 * `numpy` -- also for visualization
+
+Confirm these libraries are installed by running `python3 -c "import <library_name>"`-- if the library is present, it will exit without errors.
 
 ## Documentation
 
@@ -50,8 +54,8 @@ lcm-mon [options]
 The following options are supported:
 
 * `-h`, `--help` -- Show a help message and exit
-* `-u <lcm_url`, `--url=<lcm_url>` -- Use `lcm_url` as the LCM URL. If this option is not given, the `LCM_DEFAULT_URL` environmental variable is used. If that environmental variable is also not set, then the internal default LCM URL of `"udpm://239.255.76.67:7667?ttl=1"` is used.
-* `-f <filter_regex>`, `filter=<filter_regex>` -- Filter channels that are subscribed to by using a regex. The default is to subscribe to all channels on the network, or the regex `".*"`.
+* `-u <lcm_url>`, `--url=<lcm_url>` -- Use `lcm_url` as the LCM URL. If this option is not given, the `LCM_DEFAULT_URL` environmental variable is used. If that environmental variable is also not set, then the internal default LCM URL of `"udpm://239.255.76.67:7667?ttl=1"` is used.
+* `-f <filter_regex>`, `--filter=<filter_regex>` -- Filter channels that are subscribed to by using a regex. The default is to subscribe to all channels on the network, or the regex `".*"`.
 * `-t <types_dir>`, `--types=<types_dir>` -- Location of a directory containing `.lcm` types files, used to inspect variables inside individual LCM messages. `lcm-mon` recursively finds all `.lcm` files in this directory and compiles them itself to load all type definitions. Multiple directories can also be specified as space-separated values with this option. The default is to not load any type definitions. Note that `lcm-mon` will still be able to capture messages without knowing their types, but any messages that can't be decoded will be shown as blank on the right-hand panel.
 * `-c <config_file>`, `--config=<config_file>` -- Location of the configuration file to specify personal preferences. The default configuration file location is at `~/.config/lcm-mon/config.json`. Structure of this JSON file is described in the "Configuration" section below.
 
