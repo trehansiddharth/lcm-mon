@@ -126,8 +126,8 @@ def load_lcm_modules(folders):
         dest_file = os.path.join(lcm_dir, filename)
         new_lcm_file = shutil.copyfile(lcm_file, dest_file)
         subprocess.call(["lcm-gen", "-p", new_lcm_file,
-            "--ppath", lcm_dir,
-            "--python-no-init"])
+                         "--ppath", lcm_dir])
+    os.system(f"find {lcm_dir} -name '*__init__.py' -delete")
     py_pattern = os.path.join(lcm_dir, "**/*.py")
     py_files = glob.glob(py_pattern, recursive=True)
     lcm_classes = []
